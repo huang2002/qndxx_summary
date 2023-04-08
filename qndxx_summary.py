@@ -97,24 +97,25 @@ common_reader_params = {
 FileReader = Callable[[str], pd.DataFrame]  # path -> df_records
 
 
-def read_csv(path: str, **addition_params: Dict[str, Any]) -> pd.DataFrame:
+def read_csv(path: str, **additional_params: Dict[str, Any]) -> pd.DataFrame:
     return pd.read_csv(
         path,
         engine='python',
         **common_reader_params,
-        **addition_params,
+        **additional_params,
     )
 
 
-def read_excel(path: str, **addition_params: Dict[str, Any]) -> pd.DataFrame:
-    _addition_params = {
-        **addition_params,
-        'encoding': None,
+def read_excel(path: str, **additional_params: Dict[str, Any]) -> pd.DataFrame:
+    _additional_params = {
+        **additional_params,
     }
+    if 'encoding' in _additional_params:
+        del _additional_params['encoding']
     return pd.read_excel(
         path,
         **common_reader_params,
-        **_addition_params,
+        **_additional_params,
     )
 
 
@@ -125,10 +126,10 @@ file_readers: Dict[str, FileReader] = {
 }
 
 
-def read_file(path: str, **addition_params: Dict[str, Any]) -> pd.DataFrame:
+def read_file(path: str, **additional_params: Dict[str, Any]) -> pd.DataFrame:
     file_extension = os.path.splitext(filename)[1]
     file_reader = file_readers[file_extension.lower()]
-    return file_reader(file_path, **addition_params)
+    return file_reader(file_path, **additional_params)
 
 
 def is_acceptable_filename(filename: str) -> bool:
