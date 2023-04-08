@@ -28,13 +28,13 @@ except ImportError:
 
 ### Initialization. ###
 
-RECORD_DIR_NAME = 'records'  # 数据文件夹
-REFERENCE_DIR_NAME = 'reference'
-OUTPUT_DIR_NAME = 'output'
+RECORD_DIR_NAME = 'records'  # 观看记录文件夹名称
+STUDENT_DIR_NAME = 'students'  # 团员列表文件夹名称
+OUTPUT_DIR_NAME = 'output'  # 输出文件夹名称
 
 BASE_DIR: str = os.path.dirname(__file__)
 RECORD_DIR: str = os.path.join(BASE_DIR, RECORD_DIR_NAME)
-REFERENCE_DIR: str = os.path.join(BASE_DIR, REFERENCE_DIR_NAME)
+STUDENT_DIR: str = os.path.join(BASE_DIR, STUDENT_DIR_NAME)
 OUTPUT_BASE_DIR: str = os.path.join(BASE_DIR, OUTPUT_DIR_NAME)
 
 ################################################
@@ -43,7 +43,7 @@ OUTPUT_BASE_DIR: str = os.path.join(BASE_DIR, OUTPUT_DIR_NAME)
 # （Excel常用“gbk”和“gb2312”，CSV常用“utf-8”。）
 ################################################
 RECORD_ENCODING = 'gbk'  # 观看记录文件编码
-REFERENCE_ENCODING = 'gb2312'  # 团员列表文件编码
+STUDENT_ENCODING = 'gb2312'  # 团员列表文件编码
 
 #######################################################
 # 这些是观看记录文件表头名称相关的变量。
@@ -69,17 +69,17 @@ RECORD_COLUMNS = [
 
 ############################################
 # 这些是团员列表文件表头名称相关的变量。
-# KEY_REFERENCE_*是后面程序会直接用到的表头；
-# REFERENCE_COLUMNS是将要使用的表头列表，
-# 必须存在于reference文件夹里的团员列表文件中。
+# KEY_STUDENT_*是后面程序会直接用到的表头；
+# STUDENT_COLUMNS是将要使用的表头列表，
+# 必须存在于student文件夹里的团员列表文件中。
 ############################################
-KEY_REFERENCE_CLASS = '班级'
-KEY_REFERENCE_NAME = '姓名'
-KEY_REFERENCE_ID = '学号'
-REFERENCE_COLUMNS = [
-    KEY_REFERENCE_CLASS,
-    KEY_REFERENCE_NAME,
-    KEY_REFERENCE_ID,
+KEY_STUDENT_CLASS = '班级'
+KEY_STUDENT_NAME = '姓名'
+KEY_STUDENT_ID = '学号'
+STUDENT_COLUMNS = [
+    KEY_STUDENT_CLASS,
+    KEY_STUDENT_NAME,
+    KEY_STUDENT_ID,
 ]
 
 ####################################################
@@ -178,11 +178,11 @@ if not os.path.exists(RECORD_DIR):
     input(f'请将所有观看记录文件放入{RECORD_DIR_NAME}文件夹，然后按回车键继续……')
     print()
 
-if not os.path.exists(REFERENCE_DIR):
-    os.mkdir(REFERENCE_DIR)
+if not os.path.exists(STUDENT_DIR):
+    os.mkdir(STUDENT_DIR)
     print('已自动创建团员列表文件夹。')
     print()
-    input(f'请将团员列表文件放入{REFERENCE_DIR_NAME}文件夹，然后按回车键继续……')
+    input(f'请将团员列表文件放入{STUDENT_DIR_NAME}文件夹，然后按回车键继续……')
     print()
 
 ### Check record files. ###
@@ -197,14 +197,14 @@ for filename in record_filenames:
     print(f'  {filename}')
 print()
 
-### Check reference files. ###
+### Check student files. ###
 
-reference_filenames: List[str] = list_acceptable_filenames(REFERENCE_DIR)
-if len(reference_filenames) == 0:
+student_filenames: List[str] = list_acceptable_filenames(STUDENT_DIR)
+if len(student_filenames) == 0:
     print('未检测到团员名单文件。')
 else:
     print('检测到团员名单文件：')
-    for filename in reference_filenames:
+    for filename in student_filenames:
         print(f'  {filename}')
 print()
 
@@ -222,7 +222,7 @@ for filename in record_filenames:
     record_dataframes.append(df_record)
 print()
 
-### Load reference data. ###
+### Load student data. ###
 
 print('加载团员列表……')
 
@@ -230,20 +230,20 @@ StudentInfo = NamedTuple('StudentInfo', class_=str, name=str)
 students: List[StudentInfo] = []
 
 student_name_map = {}  # id -> name
-for filename in reference_filenames:
+for filename in student_filenames:
     print(f'  读入{filename}……')
-    file_path = os.path.join(REFERENCE_DIR, filename)
-    df_reference = read_file(file_path, encoding=REFERENCE_ENCODING)
-    df_reference.columns = REFERENCE_COLUMNS
-    df_reference.dropna(inplace=True)
-    df_reference.drop_duplicates(inplace=True)
-    for index in df_reference.index:
-        student_id = df_reference.at[index, KEY_REFERENCE_ID]
+    file_path = os.path.join(STUDENT_DIR, filename)
+    df_students = read_file(file_path, encoding=STUDENT_ENCODING)
+    df_students.columns = STUDENT_COLUMNS
+    df_students.dropna(inplace=True)
+    df_students.drop_duplicates(inplace=True)
+    for index in df_students.index:
+        student_id = df_students.at[index, KEY_STUDENT_ID]
         if student_id in student_name_map:
             print(f'  发现重复的学号：{student_id}')
             halt(1)
-        student_name = df_reference.at[index, KEY_REFERENCE_NAME]
-        student_class = df_reference.at[index, KEY_REFERENCE_CLASS]
+        student_name = df_students.at[index, KEY_STUDENT_NAME]
+        student_class = df_students.at[index, KEY_STUDENT_CLASS]
         student_name_map[student_id] = student_name
         student_info = StudentInfo(class_=student_class, name=student_name)
         students.append(student_info)
