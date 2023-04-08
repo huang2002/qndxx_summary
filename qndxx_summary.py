@@ -96,12 +96,6 @@ STUDENT_COLUMNS = [
 OUTPUT_POSITIVE = '√'
 OUTPUT_NEGATIVE = '×'
 
-common_reader_params = {
-    'skiprows': 1,
-    'skipfooter': 1,
-    'parse_dates': [KEY_RECORD_TIME],
-}
-
 FileReader = Callable[[str], pd.DataFrame]  # path -> df_records
 
 
@@ -109,7 +103,6 @@ def read_csv(path: str, **additional_params: Dict[str, Any]) -> pd.DataFrame:
     return pd.read_csv(
         path,
         engine='python',
-        **common_reader_params,
         **additional_params,
     )
 
@@ -122,7 +115,6 @@ def read_excel(path: str, **additional_params: Dict[str, Any]) -> pd.DataFrame:
         del _additional_params['encoding']
     return pd.read_excel(
         path,
-        **common_reader_params,
         **_additional_params,
     )
 
@@ -227,7 +219,13 @@ record_dataframes: List[pd.DataFrame] = []
 for filename in record_filenames:
     print(f'  读入{filename}……')
     file_path = os.path.join(RECORD_DIR, filename)
-    df_record = read_file(file_path, encoding=RECORD_ENCODING)
+    df_record = read_file(
+        file_path,
+        encoding=RECORD_ENCODING,
+        parse_dates=[KEY_RECORD_TIME],
+        skiprows=1,
+        skipfooter=1,
+    )
     df_record.columns = RECORD_COLUMNS
     df_record.dropna(inplace=True)
     df_record.drop_duplicates(inplace=True)
@@ -245,8 +243,11 @@ student_name_map = {}  # id -> name
 for filename in student_filenames:
     print(f'  读入{filename}……')
     file_path = os.path.join(STUDENT_DIR, filename)
-    df_students = read_file(file_path, encoding=STUDENT_ENCODING)
-    df_students.columns = STUDENT_COLUMNS
+    df_students = read_file(
+        file_path,
+        encoding=STUDENT_ENCODING,
+        usecols=STUDENT_COLUMNS,
+    )
     df_students.dropna(inplace=True)
     df_students.drop_duplicates(inplace=True)
     for index in df_students.index:
