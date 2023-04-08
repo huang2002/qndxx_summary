@@ -26,6 +26,14 @@ except ImportError:
     print()
     halt(1)
 
+try:
+    import openpyxl
+except ImportError:
+    print('此程序需要用到openpyxl，请先使用以下命令安装：')
+    print('pip install openpyxl')
+    print()
+    halt(1)
+
 ### Initialization. ###
 
 RECORD_DIR_NAME = 'records'  # 观看记录文件夹名称
