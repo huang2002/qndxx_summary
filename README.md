@@ -9,3 +9,7 @@
 ## 使用方法
 
 直接下载`qndxx_summary.py`并运行，然后根据提示操作即可。
+
+## 开源证书
+
+[MIT License](./LICENSE)
