@@ -107,11 +107,14 @@ def read_csv(path: str, **addition_params: Dict[str, Any]) -> pd.DataFrame:
 
 
 def read_excel(path: str, **addition_params: Dict[str, Any]) -> pd.DataFrame:
+    _addition_params = {
+        **addition_params,
+        'encoding': None,
+    }
     return pd.read_excel(
         path,
         **common_reader_params,
-        **addition_params,
-        encoding=None,
+        **_addition_params,
     )
 
 
