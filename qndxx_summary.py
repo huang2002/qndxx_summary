@@ -124,7 +124,7 @@ file_readers: Dict[str, FileReader] = {
 
 def read_file(path: str, **addition_params: Dict[str, Any]) -> pd.DataFrame:
     file_extension = os.path.splitext(filename)[1]
-    file_reader = file_readers[file_extension]
+    file_reader = file_readers[file_extension.lower()]
     return file_reader(file_path, **addition_params)
 
 
