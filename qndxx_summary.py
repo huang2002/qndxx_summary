@@ -92,7 +92,6 @@ common_reader_params = {
     'skiprows': 1,
     'skipfooter': 1,
     'parse_dates': [KEY_RECORD_TIME],
-    'infer_datetime_format': True,
 }
 
 FileReader = Callable[[str], pd.DataFrame]  # path -> df_records
@@ -112,6 +111,7 @@ def read_excel(path: str, **addition_params: Dict[str, Any]) -> pd.DataFrame:
         path,
         **common_reader_params,
         **addition_params,
+        encoding=None,
     )
 
 
