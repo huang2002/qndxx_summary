@@ -229,6 +229,8 @@ for filename in record_filenames:
     df_record.columns = RECORD_COLUMNS
     df_record.dropna(inplace=True)
     df_record.drop_duplicates(inplace=True)
+    df_record[KEY_RECORD_IDENTITY] = \
+        df_record[KEY_RECORD_IDENTITY].astype('string')
     record_dataframes.append(df_record)
 print()
 
@@ -250,6 +252,7 @@ for filename in student_filenames:
     )
     df_students.dropna(inplace=True)
     df_students.drop_duplicates(inplace=True)
+    df_students[KEY_STUDENT_ID] = df_students[KEY_STUDENT_ID].astype('string')
     for index in df_students.index:
         student_id = df_students.at[index, KEY_STUDENT_ID]
         if student_id in student_name_map:
