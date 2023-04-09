@@ -154,13 +154,13 @@ IdentityParser = Callable[[re.Match], StudentIdentity]
 # pattern -> parser
 identity_parsers = {
     # id, name
-    re.compile(r'^([a-zA-Z\d]+)([^a-zA-Z\d]+)$'): (lambda m: (m[1], m[2])),
+    re.compile(r'^\s*([a-zA-Z\d]+)\s*([^a-zA-Z\d\s]+)\s*$'): (lambda m: (m[1], m[2])),
     # name, id
-    re.compile(r'^([^a-zA-Z\d]+)([a-zA-Z\d]+)$'): (lambda m: (m[2], m[1])),
+    re.compile(r'^\s*([^a-zA-Z\d\s]+)\s*([a-zA-Z\d]+)\s*$'): (lambda m: (m[2], m[1])),
     # id only
-    re.compile(r'^([a-zA-Z\d]+)$'): (lambda m: (m[1], '')),
+    re.compile(r'^\s*([a-zA-Z\d]+)\s*$'): (lambda m: (m[1], '')),
     # name only
-    re.compile(r'^([^a-zA-Z\d]+)$'): (lambda m: ('', m[1])),
+    re.compile(r'^\s*([^a-zA-Z\d\s]+)\s*$'): (lambda m: ('', m[1])),
 }
 
 ### Start up. ###
@@ -175,13 +175,6 @@ print()
 
 ### Check directories. ###
 
-if not os.path.exists(RECORD_DIR):
-    os.mkdir(RECORD_DIR)
-    print('已自动创建观看记录文件夹。')
-    print()
-    input(f'请将所有观看记录文件放入{RECORD_DIR_NAME}文件夹，然后按回车键继续……')
-    print()
-
 if not os.path.exists(STUDENT_DIR):
     os.mkdir(STUDENT_DIR)
     print('已自动创建团员列表文件夹。')
@@ -189,17 +182,12 @@ if not os.path.exists(STUDENT_DIR):
     input(f'请将团员列表文件放入{STUDENT_DIR_NAME}文件夹，然后按回车键继续……')
     print()
 
-### Check record files. ###
-
-record_filenames: List[str] = list_acceptable_filenames(RECORD_DIR)
-if len(record_filenames) == 0:
-    print('未检测到观看记录文件！')
-    halt(1)
-
-print('检测到观看记录文件：')
-for filename in record_filenames:
-    print(f'  {filename}')
-print()
+if not os.path.exists(RECORD_DIR):
+    os.mkdir(RECORD_DIR)
+    print('已自动创建观看记录文件夹。')
+    print()
+    input(f'请将所有观看记录文件放入{RECORD_DIR_NAME}文件夹，然后按回车键继续……')
+    print()
 
 ### Check student files. ###
 
@@ -212,26 +200,16 @@ else:
         print(f'  {filename}')
 print()
 
-### Read record files. ###
+### Check record files. ###
 
-print('加载观看记录文件：')
-record_dataframes: List[pd.DataFrame] = []
+record_filenames: List[str] = list_acceptable_filenames(RECORD_DIR)
+if len(record_filenames) == 0:
+    print('未检测到观看记录文件！')
+    halt(1)
+
+print('检测到观看记录文件：')
 for filename in record_filenames:
-    print(f'  读入{filename}……')
-    file_path = os.path.join(RECORD_DIR, filename)
-    df_record = read_file(
-        file_path,
-        encoding=RECORD_ENCODING,
-        parse_dates=[KEY_RECORD_TIME],
-        skiprows=1,
-        skipfooter=1,
-    )
-    df_record.columns = RECORD_COLUMNS
-    df_record.dropna(inplace=True)
-    df_record.drop_duplicates(inplace=True)
-    df_record[KEY_RECORD_IDENTITY] = \
-        df_record[KEY_RECORD_IDENTITY].astype('string')
-    record_dataframes.append(df_record)
+    print(f'  {filename}')
 print()
 
 ### Load student data. ###
@@ -266,10 +244,6 @@ for filename in student_filenames:
 
 print()
 
-### Process records. ###
-
-print('处理观看记录……')
-
 
 def identity_to_name(identity: str, filename: str) -> str:
     for pattern, parser in identity_parsers.items():
@@ -283,12 +257,44 @@ def identity_to_name(identity: str, filename: str) -> str:
             return student_name_map[student_id]
         else:
             return student_id
+    print(f'    无法识别的用户：{identity}，文件：{filename}')
+    halt(1)
 
+
+### Read record files. ###
+
+print('加载观看记录文件：')
+record_dataframes: List[pd.DataFrame] = []
+for filename in record_filenames:
+    print(f'  读入{filename}……')
+    file_path = os.path.join(RECORD_DIR, filename)
+    df_record = read_file(
+        file_path,
+        encoding=RECORD_ENCODING,
+        parse_dates=[KEY_RECORD_TIME],
+        skiprows=1,
+        skipfooter=1,
+    )
+    df_record.columns = RECORD_COLUMNS
+    df_record.dropna(inplace=True)
+    df_record.drop_duplicates(inplace=True)
+    df_record[KEY_RECORD_IDENTITY] = \
+        df_record[KEY_RECORD_IDENTITY].astype('string')
+    df_record[KEY_RECORD_NAME] = \
+        df_record[KEY_RECORD_IDENTITY].map(
+            lambda identity: identity_to_name(identity, filename)
+    )
+    record_dataframes.append(df_record)
+print()
+
+### Process records. ###
+
+print('处理观看记录……')
 
 IssueInfo = NamedTuple('IssueInfo', name=str, time=pd.DatetimeTZDtype)
 issues: List[IssueInfo] = []
 
-for i, df_records in enumerate(record_dataframes):
+for df_records in record_dataframes:
 
     df_issues = df_records[[KEY_RECORD_ISSUE, KEY_RECORD_TIME]] \
         .groupby(KEY_RECORD_ISSUE) \
@@ -300,10 +306,6 @@ for i, df_records in enumerate(record_dataframes):
         issue = IssueInfo(name=issue_name, time=issue_time)
         issues.append(issue)
 
-    filename = record_filenames[i]
-    df_records[KEY_RECORD_NAME] = df_records[KEY_RECORD_IDENTITY].map(
-        lambda identity: identity_to_name(identity, filename)
-    )
     for index in df_records.index:
         student_class = df_records.at[index, KEY_RECORD_CLASS]
         student_name = df_records.at[index, KEY_RECORD_NAME]
@@ -376,17 +378,20 @@ def output_slice(indexer: slice, class_name: str) -> NoReturn:
 
 
 begin_index = df_output.index[0]
+previous_index = begin_index
 current_class = df_output.at[begin_index, KEY_RECORD_CLASS]
 
 for index in df_output.index:
 
     student_class = df_output.at[index, KEY_RECORD_CLASS]
     if student_class == current_class:
+        previous_index = index
         continue
 
-    output_slice(slice(begin_index, index), current_class)
+    output_slice(slice(begin_index, previous_index), current_class)
 
     begin_index = index
+    previous_index = index
     current_class = student_class
 
 # last class
