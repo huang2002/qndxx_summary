@@ -96,6 +96,8 @@ STUDENT_COLUMNS = [
 OUTPUT_POSITIVE = '√'
 OUTPUT_NEGATIVE = '×'
 
+KEY_INTERNAL_INDEX = 'internal_index'
+
 FileReader = Callable[[str], pd.DataFrame]  # path -> df_records
 
 
@@ -216,8 +218,9 @@ print()
 
 print('加载团员列表……')
 
-StudentInfo = NamedTuple('StudentInfo', class_=str, name=str)
+StudentInfo = NamedTuple('StudentInfo', index=int, class_=str, name=str)
 students: List[StudentInfo] = []
+internal_index = 0
 
 student_name_map = {}  # id -> name
 for filename in student_filenames:
@@ -239,8 +242,13 @@ for filename in student_filenames:
         student_name = df_students.at[index, KEY_STUDENT_NAME]
         student_class = df_students.at[index, KEY_STUDENT_CLASS]
         student_name_map[student_id] = student_name
-        student_info = StudentInfo(class_=student_class, name=student_name)
+        student_info = StudentInfo(
+            index=internal_index,
+            class_=student_class,
+            name=student_name,
+        )
         students.append(student_info)
+        internal_index += 1
 
 print()
 
@@ -309,15 +317,26 @@ for df_records in record_dataframes:
     for index in df_records.index:
         student_class = df_records.at[index, KEY_RECORD_CLASS]
         student_name = df_records.at[index, KEY_RECORD_NAME]
-        student_info = StudentInfo(class_=student_class, name=student_name)
-        if not student_info in students:
+        if not any(
+            (
+                (student.name == student_name)
+                and (student.class_ == student_class)
+            )
+            for student in students
+        ):
+            student_info = StudentInfo(
+                index=internal_index,
+                class_=student_class,
+                name=student_name
+            )
             students.append(student_info)
+            internal_index += 1
 
 # Sort issues in ascending order.
 issues: List[IssueInfo] = sorted(issues, key=(lambda issue: issue.time))
 
 issue_names: List[str] = [issue.name for issue in issues]
-student_classes, student_names = zip(*students)
+student_indices, student_classes, student_names = zip(*students)
 
 print()
 
@@ -326,10 +345,13 @@ print()
 print('生成统计结果……')
 
 init_data = [
-    dict(
-        (issue.name, OUTPUT_NEGATIVE)
-        for issue in issues
-    )
+    {
+        KEY_INTERNAL_INDEX: student.index,
+        **dict(
+            (issue.name, OUTPUT_NEGATIVE)
+            for issue in issues
+        ),
+    }
     for student in students
 ]
 init_index = pd.MultiIndex.from_tuples(
@@ -340,6 +362,7 @@ init_index = pd.MultiIndex.from_tuples(
 df_output = pd.DataFrame(
     data=init_data,
     index=init_index,
+    columns=[*issue_names, KEY_INTERNAL_INDEX],
 )
 
 for df_records in record_dataframes:
@@ -351,7 +374,14 @@ for df_records in record_dataframes:
         df_output.at[student_index, issue_name] = OUTPUT_POSITIVE
 
 df_output.reset_index(inplace=True)
-df_output.sort_values(by=KEY_RECORD_CLASS, inplace=True)
+df_output.sort_values(
+    by=[KEY_RECORD_CLASS, KEY_INTERNAL_INDEX],
+    inplace=True,
+)
+df_output.drop(
+    columns=[KEY_INTERNAL_INDEX],
+    inplace=True,
+)
 
 print()
 
@@ -374,7 +404,8 @@ def output_slice(indexer: slice, class_name: str) -> NoReturn:
     print(f'  导出{class_name}……')
     filename = class_name + '.xlsx'
     output_path = os.path.join(output_directory, filename)
-    df_output.loc[indexer, :].to_excel(output_path, index=False)
+    df_output.loc[indexer, :] \
+        .to_excel(output_path, index=False)
 
 
 begin_index = df_output.index[0]
