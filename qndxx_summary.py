@@ -223,22 +223,32 @@ students: List[StudentInfo] = []
 internal_index = 0
 
 student_name_map = {}  # id -> name
+
 for filename in student_filenames:
+
     print(f'  读入{filename}……')
+
     file_path = os.path.join(STUDENT_DIR, filename)
     df_students = read_file(
         file_path,
         encoding=STUDENT_ENCODING,
         usecols=STUDENT_COLUMNS,
     )
+
     df_students.dropna(inplace=True)
     df_students.drop_duplicates(inplace=True)
-    df_students[KEY_STUDENT_ID] = df_students[KEY_STUDENT_ID].astype('string')
+    df_students[KEY_STUDENT_ID] = \
+        df_students[KEY_STUDENT_ID].astype('string')
+    df_students[KEY_STUDENT_CLASS] = \
+        df_students[KEY_STUDENT_CLASS].astype('string')
+
     for index in df_students.index:
+
         student_id = df_students.at[index, KEY_STUDENT_ID]
         if student_id in student_name_map:
             print(f'  发现重复的学号：{student_id}')
             halt(1)
+
         student_name = df_students.at[index, KEY_STUDENT_NAME]
         student_class = df_students.at[index, KEY_STUDENT_CLASS]
         student_name_map[student_id] = student_name
@@ -247,6 +257,7 @@ for filename in student_filenames:
             class_=student_class,
             name=student_name,
         )
+
         students.append(student_info)
         internal_index += 1
 
@@ -288,6 +299,8 @@ for filename in record_filenames:
     df_record.drop_duplicates(inplace=True)
     df_record[KEY_RECORD_IDENTITY] = \
         df_record[KEY_RECORD_IDENTITY].astype('string')
+    df_record[KEY_RECORD_CLASS] = \
+        df_record[KEY_RECORD_CLASS].astype('string')
     df_record[KEY_RECORD_NAME] = \
         df_record[KEY_RECORD_IDENTITY].map(
             lambda identity: identity_to_name(identity, filename)
